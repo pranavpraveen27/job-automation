@@ -1,4 +1,13 @@
-const API_ROOT = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_ROOT = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000')
+  .replace(/\/+$/, '')
+  .replace(/\/api$/, '');
+
+function authHeaders(token, json = false) {
+  const headers = {};
+  if (json) headers['Content-Type'] = 'application/json';
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
 
 // Auth endpoints
 export async function login(email, password) {
@@ -39,9 +48,7 @@ export async function uploadResume(file, token) {
   const response = await fetch(`${API_ROOT}/api/resumes`, {
     method: 'POST',
     body: formData,
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: authHeaders(token),
   });
 
   if (!response.ok) {
@@ -49,7 +56,12 @@ export async function uploadResume(file, token) {
     throw new Error(errorData.message || 'Failed to upload resume');
   }
 
-  return response.json();
+  const result = await response.json();
+  return {
+    ...(result.data?.resume || {}),
+    skills: result.data?.skills || result.data?.resume?.skills || [],
+    raw: result,
+  };
 }
 
 export async function getResumes(token) {
@@ -138,14 +150,50 @@ export async function getResumeScore(resumeId, token) {
   return response.json();
 }
 
+// Job endpoints
+export async function getJobs(token, filters = {}) {
+  const query = new URLSearchParams(filters);
+  const response = await fetch(`${API_ROOT}/api/jobs?${query}`, {
+    method: 'GET',
+    headers: authHeaders(token, true),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch jobs');
+  }
+
+  const result = await response.json();
+  return {
+    ...result,
+    jobs: result.data?.jobs || result.jobs || [],
+  };
+}
+
+export async function createJob(jobData, token) {
+  const response = await fetch(`${API_ROOT}/api/jobs`, {
+    method: 'POST',
+    headers: authHeaders(token, true),
+    body: JSON.stringify(jobData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to save job');
+  }
+
+  const result = await response.json();
+  return {
+    ...result,
+    job: result.data?.job || result.job,
+  };
+}
+
 // Cover letter endpoints
 export async function generateCoverLetter(payload, token) {
   const response = await fetch(`${API_ROOT}/api/applications/generate-cover-letter`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: authHeaders(token, true),
     body: JSON.stringify(payload),
   });
 
@@ -154,7 +202,11 @@ export async function generateCoverLetter(payload, token) {
     throw new Error(errorData.message || 'Failed to generate cover letter');
   }
 
-  return response.json();
+  const result = await response.json();
+  return {
+    ...result,
+    cover_letter: result.data?.cover_letter || result.cover_letter || '',
+  };
 }
 
 // Application endpoints
@@ -173,7 +225,11 @@ export async function getApplications(token, filters = {}) {
     throw new Error(errorData.message || 'Failed to fetch applications');
   }
 
-  return response.json();
+  const result = await response.json();
+  return {
+    ...result,
+    applications: result.data?.applications || result.applications || [],
+  };
 }
 
 export async function getApplication(applicationId, token) {
@@ -190,16 +246,17 @@ export async function getApplication(applicationId, token) {
     throw new Error(errorData.message || 'Failed to fetch application');
   }
 
-  return response.json();
+  const result = await response.json();
+  return {
+    ...result,
+    application: result.data?.application || result.application,
+  };
 }
 
 export async function createApplication(applicationData, token) {
   const response = await fetch(`${API_ROOT}/api/applications`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: authHeaders(token, true),
     body: JSON.stringify(applicationData),
   });
 
@@ -208,16 +265,17 @@ export async function createApplication(applicationData, token) {
     throw new Error(errorData.message || 'Failed to create application');
   }
 
-  return response.json();
+  const result = await response.json();
+  return {
+    ...result,
+    application: result.data?.application || result.application,
+  };
 }
 
 export async function updateApplication(applicationId, updates, token) {
   const response = await fetch(`${API_ROOT}/api/applications/${applicationId}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: authHeaders(token, true),
     body: JSON.stringify(updates),
   });
 
@@ -226,7 +284,11 @@ export async function updateApplication(applicationId, updates, token) {
     throw new Error(errorData.message || 'Failed to update application');
   }
 
-  return response.json();
+  const result = await response.json();
+  return {
+    ...result,
+    application: result.data?.application || result.application,
+  };
 }
 
 // PDF export endpoints

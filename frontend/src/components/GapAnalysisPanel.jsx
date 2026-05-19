@@ -2,15 +2,11 @@ import { AlertCircle, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 function GapAnalysisPanel({ extractedSkills, selectedJob }) {
-  // Define job tech stack requirements
-  const jobRequirements = {
-    '1': ['AI', 'Product', 'Data', 'UX', 'Python', 'JavaScript', 'React', 'SQL', 'Docker'],
-    '2': ['Python', 'NLP', 'Resume Parsing', 'AWS', 'Machine Learning', 'FastAPI', 'PostgreSQL', 'Docker', 'GraphQL'],
-    '3': ['Automation', 'Recruiting', 'Analytics', 'Excel', 'Salesforce', 'Zapier', 'JavaScript', 'TypeScript'],
-  };
-
-  const selectedJobId = selectedJob?.id || '1';
-  const requiredSkills = jobRequirements[selectedJobId] || jobRequirements['1'];
+  const requiredSkills = [
+    ...(selectedJob?.skills || []),
+    ...(selectedJob?.technologies || []),
+    ...(selectedJob?.requirements || []),
+  ].filter(Boolean);
   
   // Calculate matches
   const matchedSkills = extractedSkills.filter(skill =>
@@ -22,9 +18,11 @@ function GapAnalysisPanel({ extractedSkills, selectedJob }) {
   );
 
   // Calculate metrics
-  const keywordMatchPercent = Math.round((matchedSkills.length / requiredSkills.length) * 100);
+  const keywordMatchPercent = requiredSkills.length
+    ? Math.round((matchedSkills.length / requiredSkills.length) * 100)
+    : 0;
   const experienceLevelMatch = Math.min(100, Math.round((extractedSkills.length / 12) * 100)); // Assume 12 skills = 100%
-  const techStackCoverage = Math.round((matchedSkills.length / requiredSkills.length) * 100);
+  const techStackCoverage = keywordMatchPercent;
 
   // Metrics array
   const metrics = [

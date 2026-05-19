@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const resumeRoutes = require('./routes/resume');
 const jobRoutes = require('./routes/job');
 const applicationRoutes = require('./routes/application');
+const applicationController = require('./controllers/applicationController');
 
 // Import middleware
 const { authenticateToken } = require('./middleware/authMiddleware');
@@ -43,6 +44,7 @@ mongoose.connect(MONGO_URI, {
 app.use('/api/auth', authRoutes);
 app.use('/api/resumes', resumeRoutes);
 app.use('/api/jobs', jobRoutes);
+app.post('/api/applications/generate-cover-letter', authenticateToken, applicationController.generateCoverLetter);
 app.use('/api/applications', applicationRoutes);
 
 // Health check

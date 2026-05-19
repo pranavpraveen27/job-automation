@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, Dict, List
 
 from pydantic import BaseModel
 
@@ -25,3 +25,12 @@ class JobMatchRequest(BaseModel):
 
 class JobMatchResponse(BaseModel):
     matches: List[JobMatchResult]
+
+
+class JobAnalyzeRequest(BaseModel):
+    resume_text: str
+    job_description: str
+
+
+class JobAnalyzeResponse(BaseModel):
+    analysis: Dict[str, Any]

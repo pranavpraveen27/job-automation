@@ -10,6 +10,9 @@ router.use(authenticateToken);
 // Application CRUD operations
 router.post('/', applicationController.createApplication);
 router.get('/', applicationController.getApplications);
+router.get('/stats/overview', applicationController.getApplicationStats);
+router.post('/generate-cover-letter', applicationController.generateCoverLetter);
+router.post('/export-cover-letter-pdf', pdfExportController.exportCoverLetterPDF);
 router.get('/:id', applicationController.getApplication);
 router.put('/:id', applicationController.updateApplicationStatus);
 router.delete('/:id', applicationController.deleteApplication);
@@ -17,10 +20,8 @@ router.delete('/:id', applicationController.deleteApplication);
 // Application actions
 router.post('/:id/interview', applicationController.scheduleInterview);
 router.post('/:jobId/auto-apply', applicationController.autoApplyToJob);
-router.get('/stats/overview', applicationController.getApplicationStats);
 
 // PDF Export endpoints
 router.get('/:applicationId/download-cover-letter', pdfExportController.downloadCoverLetterPDF);
-router.post('/export-cover-letter-pdf', pdfExportController.exportCoverLetterPDF);
 
 module.exports = router;

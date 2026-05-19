@@ -1,14 +1,16 @@
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const resumeController = require('../controllers/resumeController');
 const resumeOptimizationController = require('../controllers/resumeOptimizationController');
 const { authenticateToken } = require('../middleware/authMiddleware');
+const upload = multer({ storage: multer.memoryStorage() });
 
 // All resume routes require authentication
 router.use(authenticateToken);
 
 // Resume CRUD operations
-router.post('/', resumeController.uploadResume);
+router.post('/', upload.single('file'), resumeController.uploadResume);
 router.get('/', resumeController.getResumes);
 router.get('/:resumeId', resumeController.getResume);
 router.put('/:resumeId', resumeController.updateResume);

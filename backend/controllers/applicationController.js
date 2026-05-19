@@ -1,8 +1,51 @@
 const Application = require('../models/Application');
 const Job = require('../models/Job');
+const Resume = require('../models/Resume');
 const aiService = require('../services/aiService');
 const playwrightService = require('../services/playwrightService');
 const { sendResponse, handleError, getPaginationParams } = require('../utils/helpers');
+
+exports.generateCoverLetter = async (req, res) => {
+  try {
+    const {
+      candidate_name,
+      candidate_summary,
+      skills = [],
+      job_title,
+      company_name,
+      company_description,
+      resume_id,
+      job_id,
+    } = req.body;
+
+    const [resume, job] = await Promise.all([
+      resume_id ? Resume.findOne({ _id: resume_id, userId: req.user.userId }) : null,
+      job_id ? Job.findOne({ _id: job_id, userId: req.user.userId }) : null,
+    ]);
+
+    const resumeSkills = resume?.skills?.map((skill) => skill.name || skill).filter(Boolean) || [];
+    const coverLetter = await aiService.generateCoverLetter(
+      {
+        fullName: candidate_name || resume?.personalInfo?.fullName || 'Candidate',
+        email: req.user?.email || '',
+        experience: resume?.aiAnalysis?.rawText || resume?.summary || candidate_summary || '',
+        skills: resumeSkills.length ? resumeSkills : skills,
+      },
+      {
+        title: job?.title || job_title || 'the role',
+        company: job?.company || company_name || 'your company',
+        description: job?.description || company_description || '',
+        requirements: job?.requirements?.length ? job.requirements : skills,
+      }
+    );
+
+    return sendResponse(res, 200, true, 'Cover letter generated', {
+      cover_letter: coverLetter,
+    });
+  } catch (error) {
+    return handleError(res, error);
+  }
+};
 
 // Create application
 exports.createApplication = async (req, res) => {
@@ -14,6 +57,29 @@ exports.createApplication = async (req, res) => {
       return sendResponse(res, 404, false, 'Job not found');
     }
 
+    const resume = resumeId
+      ? await Resume.findOne({ _id: resumeId, userId: req.user.userId })
+      : null;
+    let finalCoverLetter = coverLetter;
+
+    if (!finalCoverLetter && resume) {
+      const resumeSkills = resume.skills?.map((skill) => skill.name || skill).filter(Boolean) || [];
+      finalCoverLetter = await aiService.generateCoverLetter(
+        {
+          fullName: resume.personalInfo?.fullName || req.user?.fullName || 'Candidate',
+          email: req.user?.email || '',
+          experience: resume.aiAnalysis?.rawText || resume.summary || '',
+          skills: resumeSkills,
+        },
+        {
+          title: job.title,
+          company: job.company,
+          description: job.description || '',
+          requirements: job.requirements?.length ? job.requirements : job.skills || [],
+        }
+      );
+    }
+
     const application = new Application({
       userId: req.user.userId,
       jobId,
@@ -23,7 +89,7 @@ exports.createApplication = async (req, res) => {
       jobUrl: job.jobUrl,
       status: 'submitted',
       coverLetter: {
-        text: coverLetter,
+        text: finalCoverLetter,
         generatedAt: new Date(),
       },
       autoApplied: autoApplied || false,
@@ -221,7 +287,7 @@ exports.deleteApplication = async (req, res) => {
     // Update job status back to open
     if (application.jobId) {
       await Job.findByIdAndUpdate(application.jobId, {
-        applicationStatus: 'open',
+        applicationStatus: 'pending',
         appliedAt: null,
       });
     }
@@ -236,7 +302,7 @@ exports.deleteApplication = async (req, res) => {
 exports.getApplicationStats = async (req, res) => {
   try {
     const stats = await Application.aggregate([
-      { $match: { userId: require('mongoose').Types.ObjectId(req.user.userId) } },
+      { $match: { userId: new (require('mongoose').Types.ObjectId)(req.user.userId) } },
       {
         $group: {
           _id: null,

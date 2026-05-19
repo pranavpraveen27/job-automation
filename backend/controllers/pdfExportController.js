@@ -4,7 +4,7 @@ const pdfGenerationService = require('../services/pdfGenerationService');
 const { sendResponse, handleError } = require('../utils/helpers');
 
 // Download cover letter as PDF
-exports.downloadCoverLetterPDF = async (req, res) => {
+const downloadCoverLetterPDF = async (req, res) => {
   try {
     const { applicationId } = req.params;
 
@@ -45,7 +45,7 @@ exports.downloadCoverLetterPDF = async (req, res) => {
 };
 
 // Download resume as PDF
-exports.downloadResumePDF = async (req, res) => {
+const downloadResumePDF = async (req, res) => {
   try {
     const { resumeId } = req.params;
 
@@ -76,7 +76,7 @@ exports.downloadResumePDF = async (req, res) => {
 };
 
 // Export cover letter as PDF (alternative endpoint for batch/multiple)
-exports.exportCoverLetterPDF = async (req, res) => {
+const exportCoverLetterPDF = async (req, res) => {
   try {
     const { applicationId, format } = req.body;
 

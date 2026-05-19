@@ -1,26 +1,67 @@
 const Resume = require('../models/Resume');
+const aiService = require('../services/aiService');
 const { sendResponse, handleError, getPaginationParams } = require('../utils/helpers');
+
+const getResumeId = (req) => req.params.resumeId || req.params.id;
 
 // Upload and parse resume
 exports.uploadResume = async (req, res) => {
   try {
-    const { fileName, fileUrl, extractedData } = req.body;
+    const body = req.body || {};
+    const uploadedFile = req.file;
+    const extractedData = body.extractedData || {};
+    let parsedData = {};
+
+    if (typeof extractedData === 'string' && extractedData.trim()) {
+      parsedData = JSON.parse(extractedData);
+    } else if (extractedData && typeof extractedData === 'object') {
+      parsedData = extractedData;
+    }
+
+    if (uploadedFile && Object.keys(parsedData).length === 0) {
+      try {
+        const aiExtraction = await aiService.extractResumeFromFile(uploadedFile);
+        parsedData = aiExtraction?.extracted_data || {};
+        if (!parsedData.skills?.length && aiExtraction?.skills?.length) {
+          parsedData.skills = aiExtraction.skills.map((skill) => ({ name: skill }));
+        }
+        parsedData.rawText = aiExtraction?.text;
+      } catch (error) {
+        console.warn('Python resume extraction failed:', error.message);
+      }
+    }
+
+    const fallbackData = {
+      personalInfo: {},
+      summary: '',
+      experience: [],
+      education: [],
+      skills: [],
+      certifications: [],
+      projects: [],
+      languages: [],
+      extractionQuality: uploadedFile ? 50 : 80,
+    };
+
+    const resumeData = { ...fallbackData, ...parsedData };
 
     const resume = new Resume({
       userId: req.user.userId,
-      fileName,
-      fileUrl,
-      personalInfo: extractedData.personalInfo,
-      summary: extractedData.summary,
-      experience: extractedData.experience,
-      education: extractedData.education,
-      skills: extractedData.skills,
-      certifications: extractedData.certifications,
-      projects: extractedData.projects,
-      languages: extractedData.languages,
+      fileName: body.fileName || uploadedFile?.originalname || 'resume.pdf',
+      fileUrl: body.fileUrl,
+      fileSize: uploadedFile?.size,
+      personalInfo: resumeData.personalInfo || {},
+      summary: resumeData.summary,
+      experience: resumeData.experience,
+      education: resumeData.education,
+      skills: resumeData.skills,
+      certifications: resumeData.certifications,
+      projects: resumeData.projects,
+      languages: resumeData.languages,
       aiAnalysis: {
         extractedAt: new Date(),
-        extractionQuality: extractedData.extractionQuality || 80,
+        extractionQuality: resumeData.extractionQuality,
+        rawText: resumeData.rawText,
       },
     });
 
@@ -39,6 +80,7 @@ exports.uploadResume = async (req, res) => {
 
     return sendResponse(res, 201, true, 'Resume uploaded successfully', {
       resume,
+      skills: resume.skills.map((skill) => skill.name || skill),
     });
   } catch (error) {
     return handleError(res, error);
@@ -71,7 +113,7 @@ exports.getResumes = async (req, res) => {
 exports.getResume = async (req, res) => {
   try {
     const resume = await Resume.findOne({
-      _id: req.params.id,
+      _id: getResumeId(req),
       userId: req.user.userId,
     });
 
@@ -91,7 +133,7 @@ exports.updateResume = async (req, res) => {
     const { personalInfo, summary, skills, experience, education } = req.body;
 
     const resume = await Resume.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.userId },
+      { _id: getResumeId(req), userId: req.user.userId },
       {
         personalInfo: personalInfo || undefined,
         summary: summary || undefined,
@@ -123,7 +165,7 @@ exports.setDefaultResume = async (req, res) => {
 
     // Set selected as default
     const resume = await Resume.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.userId },
+      { _id: getResumeId(req), userId: req.user.userId },
       { isDefault: true },
       { new: true }
     );
@@ -142,7 +184,7 @@ exports.setDefaultResume = async (req, res) => {
 exports.deleteResume = async (req, res) => {
   try {
     const resume = await Resume.findOneAndDelete({
-      _id: req.params.id,
+      _id: getResumeId(req),
       userId: req.user.userId,
     });
 

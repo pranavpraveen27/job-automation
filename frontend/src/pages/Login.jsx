@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 
@@ -8,7 +8,6 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -21,10 +20,11 @@ export default function Login() {
         password,
       });
 
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      const { token, user } = response.data.data || response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       
-      navigate('/dashboard');
+      window.location.assign('/dashboard');
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed');
     } finally {
@@ -51,16 +51,16 @@ export default function Login() {
 
       const response = await axios.post('http://localhost:5000/api/auth/google', {
         email: googleData.email,
-        firstName: googleData.given_name || '',
-        lastName: googleData.family_name || '',
+        fullName: googleData.name || `${googleData.given_name || ''} ${googleData.family_name || ''}`.trim(),
         picture: googleData.picture || '',
         googleId: googleData.sub,
       });
 
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      const { token, user } = response.data.data || response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       
-      navigate('/dashboard');
+      window.location.assign('/dashboard');
     } catch (err) {
       setError(err.response?.data?.error || 'Google login failed');
     } finally {

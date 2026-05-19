@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { getJobs } from './services/api.js';
 
 function JobList({ refreshSignal }) {
   const [jobs, setJobs] = useState([]);
@@ -10,16 +11,10 @@ function JobList({ refreshSignal }) {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/jobs');
-      const data = await response.json();
-      if (!response.ok) {
-        setError(data.error || 'Failed to load jobs.');
-      } else {
-        setJobs(data);
-      }
+      const response = await getJobs(localStorage.getItem('token'));
+      setJobs(response.jobs);
     } catch (err) {
-      setError('Unable to reach backend.');
-      console.error('JobList error:', err);
+      setError(err.message || 'Unable to load jobs.');
     } finally {
       setLoading(false);
     }
@@ -27,8 +22,6 @@ function JobList({ refreshSignal }) {
 
   useEffect(() => {
     loadJobs();
-    const interval = setInterval(loadJobs, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -36,66 +29,27 @@ function JobList({ refreshSignal }) {
   }, [refreshSignal]);
 
   return (
-    <section className="card">
-      <div className="list-header">
-        <h2>Job Status Dashboard</h2>
-        <button type="button" onClick={loadJobs}>
+    <section className="rounded-2xl border border-slate-800 bg-slate-950 p-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-white">Saved Jobs</h2>
+        <button type="button" onClick={loadJobs} className="rounded-full border border-slate-700 px-4 py-2 text-sm text-slate-200">
           Refresh
         </button>
       </div>
 
-      {loading && <p>Loading jobs...</p>}
-      {error && <p className="error-message">{error}</p>}
+      {loading && <p className="mt-4 text-slate-400">Loading jobs...</p>}
+      {error && <p className="mt-4 text-red-300">{error}</p>}
+      {!loading && jobs.length === 0 && <p className="mt-4 text-slate-400">No jobs saved yet.</p>}
 
-      {!loading && jobs.length === 0 && <p>No jobs yet. Submit one above.</p>}
-
-      {jobs.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>URL</th>
-              <th>Status</th>
-              <th>Created</th>
-              <th>Updated</th>
-              <th>Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            {jobs.map((job) => (
-              <tr key={job._id}>
-                <td>
-                  <a href={job.url} target="_blank" rel="noreferrer">
-                    {job.url}
-                  </a>
-                </td>
-                <td>
-                  <div className={`status-badge status-${job.status}`}>
-                    {job.status}
-                  </div>
-                  {job.error && <div className="job-error">Error: {job.error}</div>}
-                </td>
-                <td>{new Date(job.createdAt).toLocaleString()}</td>
-                <td>{new Date(job.updatedAt).toLocaleString()}</td>
-                <td>
-                  {job.screenshotUrl ? (
-                    <div className="screenshot-preview">
-                      <a href={job.screenshotUrl} target="_blank" rel="noreferrer">
-                        View screenshot
-                      </a>
-                      <img
-                        src={job.screenshotUrl}
-                        alt={`Screenshot for job ${job._id}`}
-                      />
-                    </div>
-                  ) : (
-                    <span>–</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <div className="mt-4 grid gap-3">
+        {jobs.map((job) => (
+          <article key={job._id} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+            <h3 className="font-semibold text-white">{job.title}</h3>
+            <p className="text-sm text-slate-400">{job.company}</p>
+            {job.jobUrl && <a href={job.jobUrl} target="_blank" rel="noreferrer" className="text-sm text-sky-300">Open posting</a>}
+          </article>
+        ))}
+      </div>
     </section>
   );
 }

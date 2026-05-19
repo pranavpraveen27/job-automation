@@ -96,6 +96,7 @@ const resumeSchema = new mongoose.Schema(
     aiAnalysis: {
       extractedAt: Date,
       extractionQuality: Number, // 0-100
+      rawText: String,
       totalScore: Number,
       keywordMatches: [String],
       suggestedImprovements: [String],

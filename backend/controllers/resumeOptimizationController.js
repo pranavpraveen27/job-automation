@@ -3,7 +3,7 @@ const aiService = require('../services/aiService');
 const { sendResponse, handleError } = require('../utils/helpers');
 
 // Analyze resume and get AI insights
-exports.getResumeInsights = async (req, res) => {
+const getResumeInsights = async (req, res) => {
   try {
     const { resumeId } = req.params;
 
@@ -36,7 +36,7 @@ exports.getResumeInsights = async (req, res) => {
 };
 
 // Generate resume critique focusing on formatting and impact
-exports.critiquesResume = async (req, res) => {
+const critiquesResume = async (req, res) => {
   try {
     const { resumeId } = req.params;
 
@@ -69,7 +69,7 @@ exports.critiquesResume = async (req, res) => {
 };
 
 // Get resume score based on format and content
-exports.getResumeScore = async (req, res) => {
+const getResumeScore = async (req, res) => {
   try {
     const { resumeId } = req.params;
 
@@ -93,11 +93,15 @@ exports.getResumeScore = async (req, res) => {
 
 // Helper: Format resume data into readable text
 function formatResumeText(resume) {
+  if (resume.aiAnalysis?.rawText) {
+    return resume.aiAnalysis.rawText;
+  }
+
   let text = '';
 
   // Personal Info
   if (resume.personalInfo) {
-    text += `${resume.personalInfo.fullName}\n`;
+    if (resume.personalInfo.fullName) text += `${resume.personalInfo.fullName}\n`;
     if (resume.personalInfo.email) text += `Email: ${resume.personalInfo.email}\n`;
     if (resume.personalInfo.phone) text += `Phone: ${resume.personalInfo.phone}\n`;
     if (resume.personalInfo.location) text += `Location: ${resume.personalInfo.location}\n`;

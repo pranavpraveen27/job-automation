@@ -2,6 +2,7 @@ import re
 from typing import List
 
 from ..schemas.job import JobMatchResult, JobPosting
+from .qwen_service import QwenService
 
 
 class JobMatchService:
@@ -26,3 +27,30 @@ class JobMatchService:
             )
 
         return sorted(results, key=lambda item: item.score, reverse=True)
+
+    @staticmethod
+    async def analyze_resume_job_match(resume_text: str, job_description: str) -> dict:
+        fallback = {
+            "matchScore": 0,
+            "matchingSkills": [],
+            "missingSkills": [],
+            "assessment": "Set OPENROUTER_API_KEY to enable AI match analysis through OpenRouter.",
+        }
+        if not QwenService.is_configured():
+            return fallback
+
+        prompt = f"""
+Compare this resume to the job description and return valid JSON only with:
+matchScore (0-100), matchingSkills, missingSkills, assessment, strengths, risks, recommendedNextSteps.
+
+RESUME:
+{resume_text[:12000]}
+
+JOB DESCRIPTION:
+{job_description[:8000]}
+"""
+        return await QwenService.generate_json(
+            prompt,
+            fallback,
+            "You are an expert recruiter evaluating candidate-job fit.",
+        )

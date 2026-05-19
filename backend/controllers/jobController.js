@@ -2,6 +2,8 @@ const Job = require('../models/Job');
 const aiService = require('../services/aiService');
 const { sendResponse, handleError, getPaginationParams } = require('../utils/helpers');
 
+const getJobId = (req) => req.params.jobId || req.params.id;
+
 // Create/Save job
 exports.createJob = async (req, res) => {
   try {
@@ -74,7 +76,7 @@ exports.getJobs = async (req, res) => {
 exports.getJob = async (req, res) => {
   try {
     const job = await Job.findOne({
-      _id: req.params.id,
+      _id: getJobId(req),
       userId: req.user.userId,
     });
 
@@ -94,7 +96,7 @@ exports.updateJob = async (req, res) => {
     const { applicationStatus, notes, tags, priority } = req.body;
 
     const job = await Job.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.userId },
+      { _id: getJobId(req), userId: req.user.userId },
       {
         applicationStatus: applicationStatus || undefined,
         notes: notes || undefined,
@@ -117,7 +119,8 @@ exports.updateJob = async (req, res) => {
 // Analyze job match
 exports.analyzeJobMatch = async (req, res) => {
   try {
-    const { jobId, resumeText } = req.body;
+    const { resumeText } = req.body;
+    const jobId = req.params.jobId || req.body.jobId;
 
     const job = await Job.findOne({
       _id: jobId,
@@ -153,7 +156,7 @@ exports.analyzeJobMatch = async (req, res) => {
 exports.deleteJob = async (req, res) => {
   try {
     const job = await Job.findOneAndDelete({
-      _id: req.params.id,
+      _id: getJobId(req),
       userId: req.user.userId,
     });
 

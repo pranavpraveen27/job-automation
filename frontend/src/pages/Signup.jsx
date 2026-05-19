@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 
@@ -13,7 +13,6 @@ export default function Signup() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -44,14 +43,14 @@ export default function Signup() {
       const response = await axios.post('http://localhost:5000/api/auth/signup', {
         email: formData.email,
         password: formData.password,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
+        fullName: `${formData.firstName} ${formData.lastName}`.trim(),
       });
 
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      const { token, user } = response.data.data || response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       
-      navigate('/dashboard');
+      window.location.assign('/dashboard');
     } catch (err) {
       setError(err.response?.data?.error || 'Signup failed');
     } finally {
@@ -78,16 +77,16 @@ export default function Signup() {
 
       const response = await axios.post('http://localhost:5000/api/auth/google', {
         email: googleData.email,
-        firstName: googleData.given_name || '',
-        lastName: googleData.family_name || '',
+        fullName: googleData.name || `${googleData.given_name || ''} ${googleData.family_name || ''}`.trim(),
         picture: googleData.picture || '',
         googleId: googleData.sub,
       });
 
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      const { token, user } = response.data.data || response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       
-      navigate('/dashboard');
+      window.location.assign('/dashboard');
     } catch (err) {
       setError(err.response?.data?.error || 'Google signup failed');
     } finally {

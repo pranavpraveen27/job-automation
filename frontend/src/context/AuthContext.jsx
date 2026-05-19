@@ -40,11 +40,10 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.post('http://localhost:5000/api/auth/signup', {
         email,
         password,
-        firstName,
-        lastName,
+        fullName: `${firstName || ''} ${lastName || ''}`.trim(),
       });
 
-      const { token, user } = response.data;
+      const { token, user } = response.data.data || response.data;
       setToken(token);
       setUser(user);
 
@@ -68,7 +67,7 @@ export const AuthProvider = ({ children }) => {
         password,
       });
 
-      const { token, user } = response.data;
+      const { token, user } = response.data.data || response.data;
       setToken(token);
       setUser(user);
 
@@ -89,7 +88,7 @@ export const AuthProvider = ({ children }) => {
       setError(null);
       const response = await axios.post('http://localhost:5000/api/auth/google', googleData);
 
-      const { token, user } = response.data;
+      const { token, user } = response.data.data || response.data;
       setToken(token);
       setUser(user);
 
@@ -128,7 +127,7 @@ export const AuthProvider = ({ children }) => {
         },
       });
 
-      return response.data.user;
+      return (response.data.data || response.data).user;
     } catch (err) {
       console.error('Failed to fetch current user:', err);
       return null;

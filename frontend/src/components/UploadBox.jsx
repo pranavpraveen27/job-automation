@@ -18,7 +18,7 @@ function UploadBox({ onUploadComplete }) {
       setLoading(true);
       setStatus('Analyzing resume...');
       try {
-        const response = await uploadResume(file);
+        const response = await uploadResume(file, localStorage.getItem('token'));
         onUploadComplete(response);
         setStatus('Resume analyzed successfully. Skills extracted.');
       } catch (error) {
