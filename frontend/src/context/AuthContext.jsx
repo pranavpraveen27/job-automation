@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_ROOT } from '../services/api.js';
 
 const AuthContext = createContext(null);
 
@@ -37,7 +38,7 @@ export const AuthProvider = ({ children }) => {
   const signup = async (email, password, firstName, lastName) => {
     try {
       setError(null);
-      const response = await axios.post('http://localhost:5000/api/auth/signup', {
+      const response = await axios.post(`${API_ROOT}/api/auth/signup`, {
         email,
         password,
         fullName: `${firstName || ''} ${lastName || ''}`.trim(),
@@ -62,7 +63,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       setError(null);
-      const response = await axios.post('http://localhost:5000/api/auth/login', {
+      const response = await axios.post(`${API_ROOT}/api/auth/login`, {
         email,
         password,
       });
@@ -86,7 +87,7 @@ export const AuthProvider = ({ children }) => {
   const googleAuth = async (googleData) => {
     try {
       setError(null);
-      const response = await axios.post('http://localhost:5000/api/auth/google', googleData);
+      const response = await axios.post(`${API_ROOT}/api/auth/google`, googleData);
 
       const { token, user } = response.data.data || response.data;
       setToken(token);
@@ -121,7 +122,7 @@ export const AuthProvider = ({ children }) => {
     if (!token) return null;
 
     try {
-      const response = await axios.get('http://localhost:5000/api/auth/me', {
+      const response = await axios.get(`${API_ROOT}/api/auth/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

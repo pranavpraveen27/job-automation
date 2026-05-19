@@ -1,4 +1,4 @@
-const API_ROOT = (import.meta.env.VITE_API_BASE_URL )
+export const API_ROOT = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000')
   .replace(/\/+$/, '')
   .replace(/\/api$/, '');
 
@@ -8,10 +8,6 @@ function authHeaders(token, json = false) {
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
-  {
-    console.log("API_ROOT:", API_ROOT);
-  }
-
 // Auth endpoints
 export async function login(email, password) {
 

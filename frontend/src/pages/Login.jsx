@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
+import { API_ROOT } from '../services/api.js';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -15,7 +16,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', {
+      const response = await axios.post(`${API_ROOT}/api/auth/login`, {
         email,
         password,
       });
@@ -49,7 +50,7 @@ export default function Login() {
 
       const googleData = JSON.parse(jsonPayload);
 
-      const response = await axios.post('http://localhost:5000/api/auth/google', {
+      const response = await axios.post(`${API_ROOT}/api/auth/google`, {
         email: googleData.email,
         fullName: googleData.name || `${googleData.given_name || ''} ${googleData.family_name || ''}`.trim(),
         picture: googleData.picture || '',
