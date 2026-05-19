@@ -3,75 +3,75 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
-const Job = require('./models/Job');
-const { processJob } = require('./automation');
+
+// Import routes
+const authRoutes = require('./routes/auth');
+const resumeRoutes = require('./routes/resume');
+const jobRoutes = require('./routes/job');
+const applicationRoutes = require('./routes/application');
+
+// Import middleware
+const { authenticateToken } = require('./middleware/authMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/job-agent';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/aicruit';
 
+// Middleware
 app.use('/screenshots', express.static(path.join(__dirname, 'screenshots')));
 
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+}));
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// MongoDB Connection
 mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-  .then(() => console.log('MongoDB connected'))
+  .then(() => console.log('✅ MongoDB connected'))
   .catch((err) => {
-    console.error('MongoDB connection error:', err);
+    console.error('❌ MongoDB connection error:', err);
     process.exit(1);
   });
 
-app.post('/apply', async (req, res) => {
-  const { url } = req.body;
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/resumes', resumeRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/applications', applicationRoutes);
 
-  if (!url) {
-    return res.status(400).json({ error: 'Job URL is required' });
-  }
-
-  try {
-    const job = new Job({ url, status: 'pending' });
-    await job.save();
-
-    processJob(job._id)
-      .then(() => console.log(`Started automation for job ${job._id}`))
-      .catch((error) => console.error('Automation error:', error));
-
-    return res.json({ message: 'Job created', jobId: job._id });
-  } catch (error) {
-    console.error('Error saving job:', error);
-    return res.status(500).json({ error: 'Failed to create job' });
-  }
-});
-
+// Health check
 app.get('/health', (req, res) => {
   return res.json({
     status: 'ok',
-    service: 'Autonomous Job Application Agent',
-    time: new Date().toISOString(),
+    service: 'AICruit - AI Recruitment Assistant',
+    timestamp: new Date().toISOString(),
   });
 });
 
-app.get('/jobs', async (req, res) => {
-  try {
-    const jobs = await Job.find().sort({ createdAt: -1 });
-    const response = jobs.map((job) => {
-      const jobObject = job.toObject();
-      if (jobObject.screenshotPath) {
-        jobObject.screenshotUrl = `${req.protocol}://${req.get('host')}/screenshots/${path.basename(jobObject.screenshotPath)}`;
-      }
-      return jobObject;
-    });
-    return res.json(response);
-  } catch (error) {
-    console.error('Error loading jobs:', error);
-    return res.status(500).json({ error: 'Failed to load jobs' });
-  }
+// 404 handler
+app.use((req, res) => {
+  return res.status(404).json({
+    success: false,
+    message: 'Route not found',
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  return res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal server error',
+  });
 });
 
 app.listen(PORT, () => {
-  console.log(`Backend server running on http://localhost:${PORT}`);
+  console.log(`🚀 Backend server running on http://localhost:${PORT}`);
 });
+
