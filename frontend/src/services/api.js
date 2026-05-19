@@ -11,6 +11,7 @@ function authHeaders(token, json = false) {
 
 // Auth endpoints
 export async function login(email, password) {
+  { console.log('API_ROOT:', API_ROOT); }
   const response = await fetch(`${API_ROOT}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
