@@ -24,7 +24,9 @@ class PlaywrightService {
     if (!this.browser) {
       await this.initializeBrowser();
     }
-    return await this.browser.newPage();
+    const page = await this.browser.newPage();
+    page.setDefaultTimeout(Number(process.env.PLAYWRIGHT_ACTION_TIMEOUT || 10000));
+    return page;
   }
 
   // Close browser
@@ -100,6 +102,103 @@ class PlaywrightService {
     }
   }
 
+  normalizeFieldKey(value = '') {
+    return String(value).toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  getApplicationValue(applicationData = {}, ...fieldKeys) {
+    const entries = Object.entries(applicationData);
+    const normalizedFields = fieldKeys
+      .filter(Boolean)
+      .map((key) => this.normalizeFieldKey(key));
+
+    const match = entries.find(([key]) => normalizedFields.includes(this.normalizeFieldKey(key)));
+    return match ? String(match[1] ?? '') : '';
+  }
+
+  async getFieldHints(page, field) {
+    return await field.evaluate((element) => {
+      const labels = Array.from(element.labels || []).map((label) => label.textContent || '');
+      const ariaLabelledBy = element.getAttribute('aria-labelledby');
+      if (ariaLabelledBy) {
+        labels.push(
+          ...ariaLabelledBy
+            .split(/\s+/)
+            .map((id) => document.getElementById(id)?.textContent || '')
+        );
+      }
+
+      const parentText = element.closest('label, div, fieldset')?.textContent || '';
+      return [
+        element.getAttribute('name'),
+        element.getAttribute('placeholder'),
+        element.getAttribute('aria-label'),
+        element.getAttribute('id'),
+        element.getAttribute('autocomplete'),
+        ...labels,
+        parentText,
+      ].filter(Boolean);
+    });
+  }
+
+  async fillFormFields(page, applicationData = {}) {
+    const fields = await page.$$('input, textarea, select');
+    const filled = [];
+
+    for (const field of fields) {
+      const tagName = await field.evaluate((element) => element.tagName.toLowerCase());
+      const type = (await field.getAttribute('type')) || '';
+      const lowerType = type.toLowerCase();
+      const disabled = await field.evaluate((element) => element.disabled || element.readOnly);
+      if (disabled || ['hidden', 'file', 'submit', 'button', 'reset', 'image'].includes(lowerType)) {
+        continue;
+      }
+
+      const hints = await this.getFieldHints(page, field);
+      const value = this.getApplicationValue(applicationData, ...hints);
+      if (!value) {
+        continue;
+      }
+
+      try {
+        if (tagName === 'select') {
+          const selected = await field.selectOption({ label: value }).catch(async () => (
+            field.selectOption(value)
+          ));
+          if (selected.length) filled.push({ field: hints[0] || hints[1] || tagName, value });
+          continue;
+        }
+
+        if (lowerType === 'checkbox' || lowerType === 'radio') {
+          const normalizedValue = this.normalizeFieldKey(value);
+          if (['yes', 'true', '1', 'checked'].includes(normalizedValue)) {
+            await field.check();
+            filled.push({ field: hints[0] || hints[1] || lowerType, value });
+          }
+          continue;
+        }
+
+        await field.fill(value);
+        filled.push({ field: hints[0] || hints[1] || tagName, value });
+      } catch (error) {
+        console.warn(`Skipping field ${hints[0] || hints[1] || tagName}: ${error.message}`);
+      }
+    }
+
+    return filled;
+  }
+
+  async clickFirstAvailable(page, selectors) {
+    for (const selector of selectors) {
+      const element = await page.$(selector);
+      if (element) {
+        await element.click();
+        return selector;
+      }
+    }
+    return null;
+  }
+
   // LinkedIn job application
   async applyToLinkedInJob(page, jobUrl, applicationData) {
     try {
@@ -114,25 +213,19 @@ class PlaywrightService {
       await easyApplyButton.click();
       await page.waitForTimeout(2000);
 
-      // Handle form fields dynamically
-      // This is simplified - real implementation would need to handle various form types
-      const formFields = await page.$$('input, textarea, select');
-      
-      for (const field of formFields) {
-        const name = await field.getAttribute('name');
-        if (applicationData[name]) {
-          await field.fill(applicationData[name]);
-        }
-      }
+      const filledFields = await this.fillFormFields(page, applicationData);
 
       // Submit application
-      const submitButton = await page.$('button:has-text("Submit")');
-      if (submitButton) {
-        await submitButton.click();
+      const submitSelector = await this.clickFirstAvailable(page, [
+        'button:has-text("Submit application")',
+        'button:has-text("Submit")',
+        'button[aria-label*="Submit"]',
+      ]);
+      if (submitSelector) {
         await page.waitForTimeout(3000);
       }
 
-      return { success: true, message: 'Application submitted' };
+      return { success: true, message: submitSelector ? 'Application submitted' : 'Application form filled', filledFields };
     } catch (error) {
       console.error('Error applying to LinkedIn job:', error);
       throw error;
@@ -153,27 +246,19 @@ class PlaywrightService {
       await applyButton.click();
       await page.waitForTimeout(2000);
 
-      // Handle form fields
-      const formInputs = await page.$$('input, textarea');
-      
-      for (const input of formInputs) {
-        const placeholder = await input.getAttribute('placeholder');
-        const name = await input.getAttribute('name');
-        
-        if (applicationData[placeholder] || applicationData[name]) {
-          const value = applicationData[placeholder] || applicationData[name];
-          await input.fill(value);
-        }
-      }
+      const filledFields = await this.fillFormFields(page, applicationData);
 
       // Submit
-      const submitBtn = await page.$('button[type="submit"]');
-      if (submitBtn) {
-        await submitBtn.click();
+      const submitSelector = await this.clickFirstAvailable(page, [
+        'button[type="submit"]',
+        'button:has-text("Submit")',
+        'button:has-text("Apply")',
+      ]);
+      if (submitSelector) {
         await page.waitForTimeout(3000);
       }
 
-      return { success: true, message: 'Application submitted' };
+      return { success: true, message: submitSelector ? 'Application submitted' : 'Application form filled', filledFields };
     } catch (error) {
       console.error('Error applying to Indeed job:', error);
       throw error;

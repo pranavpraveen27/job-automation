@@ -25,27 +25,20 @@ load_env_file()
 class Settings:
     allowed_origins: List[str]
     ai_service_url: str
-    qwen_provider: str
-    qwen_api_key: str
-    qwen_base_url: str
-    qwen_model: str
-    openrouter_site_url: str
-    openrouter_app_name: str
+    groq_api_key: str
+    groq_base_url: str
+    groq_model: str
 
     def __init__(self) -> None:
-        origins = os.getenv("ALLOWED_ORIGINS", "*")
-        self.allowed_origins = [origin.strip() for origin in origins.split(",") if origin.strip()]
-        self.ai_service_url = os.getenv("AI_SERVICE_URL", "")
-        self.qwen_provider = os.getenv("QWEN_PROVIDER", "openrouter").strip().lower()
-        self.qwen_api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("QWEN_API_KEY", "")
-        self.qwen_base_url = os.getenv("QWEN_BASE_URL", "https://openrouter.ai/api").rstrip("/")
-        self.qwen_model = (
-            os.getenv("OPENROUTER_MODEL")
-            or os.getenv("QWEN_MODEL")
-            or "mistralai/mistral-small-3.2-24b-instruct:free"
+        origins = os.getenv(
+            "ALLOWED_ORIGINS",
+            "http://localhost:5173,https://job-automation.pages.dev",
         )
-        self.openrouter_site_url = os.getenv("OPENROUTER_SITE_URL", "http://localhost:5173")
-        self.openrouter_app_name = os.getenv("OPENROUTER_APP_NAME", "AICruit")
+        self.allowed_origins = [origin.strip() for origin in origins.split(",") if origin.strip()]
+        self.ai_service_url = os.getenv("AI_SERVICE_URL", "http://127.0.0.1:8000")
+        self.groq_api_key = os.getenv("GROQ_API_KEY", "")
+        self.groq_base_url = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1").rstrip("/")
+        self.groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 
 settings = Settings()

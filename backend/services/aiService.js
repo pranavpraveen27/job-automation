@@ -32,7 +32,7 @@ class AIService {
       .filter(Boolean);
   }
 
-  // Generate cover letter using Python FastAPI + Qwen
+  // Generate cover letter using Python FastAPI + Groq
   async generateCoverLetter(candidateInfo, jobInfo) {
     const payload = {
       candidate_name: candidateInfo.fullName || 'Candidate',
@@ -73,6 +73,15 @@ class AIService {
       job_description: jobDescription,
     });
     return result.analysis;
+  }
+
+  async generateApplicationFields(resumeText, jobDescription, coverLetter = '') {
+    const result = await this.postJson('/jobs/application-fields', {
+      resume_text: resumeText,
+      job_description: jobDescription,
+      cover_letter: coverLetter,
+    });
+    return result.fields || {};
   }
 
   // Extract job recommendations based on resume

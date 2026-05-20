@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
-import { Briefcase, ArrowRight, Plus } from 'lucide-react';
+import { Briefcase, ArrowRight, Plus, Wand2 } from 'lucide-react';
 import { useState } from 'react';
 
-function JobCard({ job, onTrackApplication, onApply }) {
+function JobCard({ job, onTrackApplication, onApply, onAutoApply, isAutoApplying }) {
   const [showMenu, setShowMenu] = useState(false);
 
   const skills = job.skills || [];
@@ -15,6 +15,7 @@ function JobCard({ job, onTrackApplication, onApply }) {
     onTrackApplication?.(job, column);
     setShowMenu(false);
   };
+  const canAutoApply = ['linkedin', 'indeed'].includes(job.jobPortal) && Boolean(job.jobUrl);
 
   return (
     <motion.article
@@ -81,6 +82,18 @@ function JobCard({ job, onTrackApplication, onApply }) {
             Apply
             <ArrowRight className="h-4 w-4" />
           </button>
+          {canAutoApply && (
+            <button
+              type="button"
+              onClick={() => onAutoApply?.(job)}
+              disabled={isAutoApplying}
+              className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+              title="Use Playwright to fill and submit this application"
+            >
+              <Wand2 className="h-4 w-4" />
+              {isAutoApplying ? 'Applying...' : 'Auto'}
+            </button>
+          )}
         </div>
       </div>
     </motion.article>

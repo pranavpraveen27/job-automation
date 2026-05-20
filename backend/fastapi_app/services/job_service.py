@@ -2,7 +2,7 @@ import re
 from typing import List
 
 from ..schemas.job import JobMatchResult, JobPosting
-from .qwen_service import QwenService
+from .groq_service import GroqService
 
 
 class JobMatchService:
@@ -34,9 +34,9 @@ class JobMatchService:
             "matchScore": 0,
             "matchingSkills": [],
             "missingSkills": [],
-            "assessment": "Set OPENROUTER_API_KEY to enable AI match analysis through OpenRouter.",
+            "assessment": "Set GROQ_API_KEY to enable AI match analysis through Groq.",
         }
-        if not QwenService.is_configured():
+        if not GroqService.is_configured():
             return fallback
 
         prompt = f"""
@@ -49,8 +49,38 @@ RESUME:
 JOB DESCRIPTION:
 {job_description[:8000]}
 """
-        return await QwenService.generate_json(
+        return await GroqService.generate_json(
             prompt,
             fallback,
             "You are an expert recruiter evaluating candidate-job fit.",
+        )
+
+    @staticmethod
+    async def generate_application_fields(resume_text: str, job_description: str, cover_letter: str = "") -> dict:
+        fallback = {}
+        if not GroqService.is_configured():
+            return fallback
+
+        prompt = f"""
+Generate likely job application form values from this resume and job.
+
+Return ONLY valid JSON object. Use common field keys that Playwright can match, including:
+firstName, lastName, fullName, name, email, phone, location, linkedin, github, portfolio,
+currentCompany, currentTitle, coverLetter, summary, workAuthorization, sponsorship, noticePeriod.
+
+Keep values truthful to the resume. If unknown, use an empty string.
+
+RESUME:
+{resume_text[:12000]}
+
+JOB DESCRIPTION:
+{job_description[:8000]}
+
+COVER LETTER:
+{cover_letter[:4000]}
+"""
+        return await GroqService.generate_json(
+            prompt,
+            fallback,
+            "You create truthful job application form data from resumes. Return JSON only.",
         )

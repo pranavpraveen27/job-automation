@@ -219,12 +219,69 @@ exports.scheduleInterview = async (req, res) => {
 // Auto-apply to job using Playwright
 exports.autoApplyToJob = async (req, res) => {
   try {
-    const { jobId } = req.body;
+    const { resumeId, coverLetter } = req.body;
+    const jobId = req.params.jobId || req.body.jobId;
 
     const job = await Job.findOne({ _id: jobId, userId: req.user.userId });
     if (!job) {
       return sendResponse(res, 404, false, 'Job not found');
     }
+
+    if (!job.jobUrl) {
+      return sendResponse(res, 400, false, 'Job URL is required for Playwright auto-apply');
+    }
+
+    const resume = resumeId
+      ? await Resume.findOne({ _id: resumeId, userId: req.user.userId })
+      : await Resume.findOne({ userId: req.user.userId, isDefault: true });
+
+    const resumeText = resume?.aiAnalysis?.rawText || resume?.summary || '';
+    const jobDescription = [
+      job.title,
+      job.company,
+      job.description,
+      job.requirements?.join(', '),
+      job.skills?.join(', '),
+    ].filter(Boolean).join('\n');
+
+    let finalCoverLetter = coverLetter;
+    if (!finalCoverLetter && resume) {
+      const resumeSkills = resume.skills?.map((skill) => skill.name || skill).filter(Boolean) || [];
+      finalCoverLetter = await aiService.generateCoverLetter(
+        {
+          fullName: resume.personalInfo?.fullName || 'Candidate',
+          email: req.user?.email || '',
+          experience: resumeText,
+          skills: resumeSkills,
+        },
+        {
+          title: job.title,
+          company: job.company,
+          description: job.description || '',
+          requirements: job.requirements?.length ? job.requirements : job.skills || [],
+        }
+      );
+    }
+
+    const generatedFields = await aiService.generateApplicationFields(
+      resumeText,
+      jobDescription,
+      finalCoverLetter || ''
+    );
+    const fullName = resume?.personalInfo?.fullName || req.user?.fullName || '';
+    const applicationData = {
+      fullName,
+      name: fullName,
+      email: resume?.personalInfo?.email || req.user?.email || '',
+      phone: resume?.personalInfo?.phone || '',
+      location: resume?.personalInfo?.location || '',
+      linkedin: resume?.personalInfo?.linkedinUrl || '',
+      github: resume?.personalInfo?.githubUrl || '',
+      portfolio: resume?.personalInfo?.portfolioUrl || '',
+      summary: resume?.summary || '',
+      coverLetter: finalCoverLetter || '',
+      ...generatedFields,
+    };
 
     // Check job portal and apply
     let page = null;
@@ -233,9 +290,9 @@ exports.autoApplyToJob = async (req, res) => {
 
       let result;
       if (job.jobPortal === 'linkedin') {
-        result = await playwrightService.applyToLinkedInJob(page, job.jobUrl, {});
+        result = await playwrightService.applyToLinkedInJob(page, job.jobUrl, applicationData);
       } else if (job.jobPortal === 'indeed') {
-        result = await playwrightService.applyToIndeedJob(page, job.jobUrl, {});
+        result = await playwrightService.applyToIndeedJob(page, job.jobUrl, applicationData);
       } else {
         throw new Error(`Unsupported job portal: ${job.jobPortal}`);
       }
@@ -244,12 +301,32 @@ exports.autoApplyToJob = async (req, res) => {
       const application = new Application({
         userId: req.user.userId,
         jobId,
+        resumeId: resume?._id,
+        jobTitle: job.title,
+        company: job.company,
+        jobUrl: job.jobUrl,
         status: 'submitted',
+        coverLetter: {
+          text: finalCoverLetter,
+          generatedAt: new Date(),
+          model: 'groq',
+        },
+        formResponses: {
+          responses: Object.entries(applicationData).map(([fieldName, fieldValue]) => ({
+            fieldName,
+            fieldValue: String(fieldValue ?? ''),
+            fieldType: 'text',
+          })),
+          autoFilled: true,
+          filledAt: new Date(),
+        },
         autoApplied: true,
         applicationMethod: 'auto',
         automationDetails: {
           executedAt: new Date(),
+          completedAt: new Date(),
           success: true,
+          playwrightSessionId: result?.sessionId,
         },
       });
 

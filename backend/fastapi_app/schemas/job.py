@@ -34,3 +34,13 @@ class JobAnalyzeRequest(BaseModel):
 
 class JobAnalyzeResponse(BaseModel):
     analysis: Dict[str, Any]
+
+
+class ApplicationFieldsRequest(BaseModel):
+    resume_text: str
+    job_description: str
+    cover_letter: str = ""
+
+
+class ApplicationFieldsResponse(BaseModel):
+    fields: Dict[str, Any]

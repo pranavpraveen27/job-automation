@@ -1,12 +1,12 @@
 from ..schemas.cover_letter import CoverLetterRequest
-from .qwen_service import QwenService
+from .groq_service import GroqService
 
 
 class CoverLetterService:
     @staticmethod
     async def generate_cover_letter(request: CoverLetterRequest) -> str:
-        if not QwenService.is_configured():
-            raise RuntimeError("Set OPENROUTER_API_KEY to generate cover letters with the configured OpenRouter model.")
+        if not GroqService.is_configured():
+            raise RuntimeError("Set GROQ_API_KEY to generate cover letters with Groq.")
 
         prompt = f"""
 Write a concise, professional cover letter tailored to this role.
@@ -25,7 +25,7 @@ Requirements:
 - Keep it under 350 words.
 - Do not invent companies, degrees, or metrics that are not provided.
 """
-        return await QwenService.generate_text(
+        return await GroqService.generate_text(
             prompt,
             "You write personalized job application cover letters.",
             temperature=0.6,

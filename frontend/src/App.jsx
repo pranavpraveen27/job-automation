@@ -8,6 +8,7 @@ import CoverLetterPanel from './components/CoverLetterPanel.jsx';
 import GapAnalysisPanel from './components/GapAnalysisPanel.jsx';
 import KanbanBoard from './components/KanbanBoard.jsx';
 import {
+  autoApplyToJob,
   createApplication,
   createJob,
   generateCoverLetter,
@@ -66,7 +67,9 @@ function App() {
   const [applications, setApplications] = useState([]);
   const [activeView, setActiveView] = useState('recommendations');
   const [selectedJob, setSelectedJob] = useState(null);
+  const [autoApplyingJobId, setAutoApplyingJobId] = useState(null);
   const [jobForm, setJobForm] = useState({
+    jobPortal: 'custom',
     title: '',
     company: '',
     location: '',
@@ -145,7 +148,7 @@ function App() {
 
     try {
       const response = await createJob({
-        jobPortal: 'custom',
+        jobPortal: jobForm.jobPortal,
         title: jobForm.title,
         company: jobForm.company,
         location: jobForm.location,
@@ -157,7 +160,7 @@ function App() {
       const savedJob = normalizeJob(response.job);
       setJobs((current) => [savedJob, ...current]);
       setSelectedJob(savedJob);
-      setJobForm({ title: '', company: '', location: '', jobUrl: '', description: '', skills: '' });
+      setJobForm({ jobPortal: 'custom', title: '', company: '', location: '', jobUrl: '', description: '', skills: '' });
       setStatusMessage('Job saved to backend.');
     } catch (error) {
       setStatusMessage(error.message || 'Unable to save job.');
@@ -184,6 +187,30 @@ function App() {
       setStatusMessage('Application created in backend.');
     } catch (error) {
       setStatusMessage(error.message || 'Unable to create application.');
+    }
+  };
+
+  const handleAutoApplyToJob = async (job) => {
+    setStatusMessage('');
+    setAutoApplyingJobId(job.id);
+    try {
+      const response = await autoApplyToJob(job._id || job.id, {
+        resumeId: resumeData?._id,
+        coverLetter,
+      }, token);
+
+      const application = normalizeApplication(response.application);
+      setApplications((current) => [application, ...current]);
+      setJobs((current) => current.map((item) => (
+        item.id === job.id ? { ...item, applicationStatus: 'applied', autoApplied: true } : item
+      )));
+      setSelectedJob(job);
+      setActiveView('applications');
+      setStatusMessage('Playwright auto-apply completed and saved the application.');
+    } catch (error) {
+      setStatusMessage(error.message || 'Unable to auto-apply with Playwright.');
+    } finally {
+      setAutoApplyingJobId(null);
     }
   };
 
@@ -270,6 +297,13 @@ function App() {
               <form onSubmit={handleSaveJob} className="rounded-[1.5rem] border border-slate-800/80 bg-slate-900/70 p-5">
                 <h3 className="text-lg font-semibold text-white">Save job</h3>
                 <div className="mt-4 grid gap-3">
+                  <select value={jobForm.jobPortal} onChange={(event) => setJobForm({ ...jobForm, jobPortal: event.target.value })} className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-sky-500">
+                    <option value="custom">Custom</option>
+                    <option value="linkedin">LinkedIn</option>
+                    <option value="indeed">Indeed</option>
+                    <option value="glassdoor">Glassdoor</option>
+                    <option value="wellfound">Wellfound</option>
+                  </select>
                   <input required value={jobForm.title} onChange={(event) => setJobForm({ ...jobForm, title: event.target.value })} placeholder="Job title" className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-sky-500" />
                   <input required value={jobForm.company} onChange={(event) => setJobForm({ ...jobForm, company: event.target.value })} placeholder="Company" className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-sky-500" />
                   <input value={jobForm.location} onChange={(event) => setJobForm({ ...jobForm, location: event.target.value })} placeholder="Location" className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-sky-500" />
@@ -349,6 +383,8 @@ function App() {
                       job={job}
                       onTrackApplication={handleTrackApplication}
                       onApply={handleApplyToJob}
+                      onAutoApply={handleAutoApplyToJob}
+                      isAutoApplying={autoApplyingJobId === job.id}
                     />
                   ))}
                 </div>

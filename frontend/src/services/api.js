@@ -272,6 +272,25 @@ export async function createApplication(applicationData, token) {
   };
 }
 
+export async function autoApplyToJob(jobId, payload, token) {
+  const response = await fetch(`${API_ROOT}/api/applications/${jobId}/auto-apply`, {
+    method: 'POST',
+    headers: authHeaders(token, true),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to auto-apply to job');
+  }
+
+  const result = await response.json();
+  return {
+    ...result,
+    application: result.data?.application || result.application,
+  };
+}
+
 export async function updateApplication(applicationId, updates, token) {
   const response = await fetch(`${API_ROOT}/api/applications/${applicationId}`, {
     method: 'PUT',
