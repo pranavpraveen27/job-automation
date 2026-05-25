@@ -7,6 +7,10 @@ import JobCard from './components/JobCard.jsx';
 import CoverLetterPanel from './components/CoverLetterPanel.jsx';
 import GapAnalysisPanel from './components/GapAnalysisPanel.jsx';
 import KanbanBoard from './components/KanbanBoard.jsx';
+import ResumeAnalyzer from './pages/ResumeAnalyzer.jsx';
+import JobSearch from './pages/JobSearch.jsx';
+import Settings from './pages/Settings.jsx';
+import Profile from './pages/Profile.jsx';
 import {
   autoApplyToJob,
   createApplication,
@@ -280,19 +284,22 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto grid max-w-[1700px] gap-8 px-5 py-8 lg:grid-cols-[280px_minmax(0,_1fr)] lg:px-10">
-        <Sidebar />
+        <Sidebar activeView={activeView} onNavigate={setActiveView} />
 
         <div className="space-y-8">
-          <Navbar />
+          <Navbar onProfileClick={() => setActiveView('profile')} />
 
-          <section className="rounded-[2rem] border border-slate-800/80 bg-slate-950/90 p-8 shadow-2xl shadow-slate-950/20">
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,_1fr)_420px]">
-              <div className="space-y-6">
-                <p className="text-sm uppercase tracking-[0.34em] text-sky-400/80">Backend connected</p>
-                <h2 className="text-4xl font-semibold text-white sm:text-5xl">Your live job application workspace.</h2>
-                <p className="max-w-2xl text-slate-400">Jobs, applications, resumes, and cover letters now come from your Express API and MongoDB data.</p>
-                {statusMessage && <p className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-sm text-slate-300">{statusMessage}</p>}
-              </div>
+          {/* Dashboard View */}
+          {activeView === 'recommendations' && (
+            <>
+              <section className="rounded-[2rem] border border-slate-800/80 bg-slate-950/90 p-8 shadow-2xl shadow-slate-950/20">
+                <div className="grid gap-8 lg:grid-cols-[minmax(0,_1fr)_420px]">
+                  <div className="space-y-6">
+                    <p className="text-sm uppercase tracking-[0.34em] text-sky-400/80">Backend connected</p>
+                    <h2 className="text-4xl font-semibold text-white sm:text-5xl">Your live job application workspace.</h2>
+                    <p className="max-w-2xl text-slate-400">Jobs, applications, resumes, and cover letters now come from your Express API and MongoDB data.</p>
+                    {statusMessage && <p className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-sm text-slate-300">{statusMessage}</p>}
+                  </div>
 
               <form onSubmit={handleSaveJob} className="rounded-[1.5rem] border border-slate-800/80 bg-slate-900/70 p-5">
                 <h3 className="text-lg font-semibold text-white">Save job</h3>
@@ -313,10 +320,10 @@ function App() {
                 </div>
                 <button type="submit" className="mt-4 w-full rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 px-5 py-3 text-sm font-semibold text-white">Save to backend</button>
               </form>
-            </div>
-          </section>
+                </div>
+              </section>
 
-          <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+              <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
             <div className="grid gap-6">
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
                 {stats.map((stat) => (
@@ -372,33 +379,56 @@ function App() {
               </div>
             </div>
 
-            {activeView === 'recommendations' ? (
-              loadingData ? (
-                <p className="rounded-[2rem] border border-slate-800 bg-slate-950/90 p-6 text-slate-400">Loading backend jobs...</p>
-              ) : jobs.length > 0 ? (
-                <div className="grid gap-5 xl:grid-cols-3">
-                  {jobs.map((job) => (
-                    <JobCard
-                      key={job.id}
-                      job={job}
-                      onTrackApplication={handleTrackApplication}
-                      onApply={handleApplyToJob}
-                      onAutoApply={handleAutoApplyToJob}
-                      isAutoApplying={autoApplyingJobId === job.id}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="rounded-[2rem] border border-slate-800 bg-slate-950/90 p-6 text-slate-400">No backend jobs yet. Save your first job above.</p>
-              )
+            {loadingData ? (
+              <p className="rounded-[2rem] border border-slate-800 bg-slate-950/90 p-6 text-slate-400">Loading backend jobs...</p>
+            ) : jobs.length > 0 ? (
+              <div className="grid gap-5 xl:grid-cols-3">
+                {jobs.map((job) => (
+                  <JobCard
+                    key={job.id}
+                    job={job}
+                    onTrackApplication={handleTrackApplication}
+                    onApply={handleApplyToJob}
+                    onAutoApply={handleAutoApplyToJob}
+                    isAutoApplying={autoApplyingJobId === job.id}
+                  />
+                ))}
+              </div>
             ) : (
+              <p className="rounded-[2rem] border border-slate-800 bg-slate-950/90 p-6 text-slate-400">No backend jobs yet. Save your first job above.</p>
+            )}
+          </section>
+          </>
+          )}
+
+          {/* Resume Analyzer View */}
+          {activeView === 'resume-analyzer' && <ResumeAnalyzer />}
+
+          {/* Job Search View */}
+          {activeView === 'job-search' && <JobSearch />}
+
+          {/* Applications View - Standalone */}
+          {activeView === 'applications' && (
+            <>
+              <section className="rounded-[2rem] border border-slate-800/80 bg-slate-950/90 p-8 shadow-2xl shadow-slate-950/20">
+                <div>
+                  <p className="text-sm uppercase tracking-[0.34em] text-sky-400/80">Application Tracking</p>
+                  <h2 className="text-3xl font-semibold text-white mt-2">Your Applications</h2>
+                </div>
+              </section>
               <KanbanBoard
                 applications={trackedApplications}
                 onMoveCard={handleMoveCard}
                 onRemoveCard={handleRemoveCard}
               />
-            )}
-          </section>
+            </>
+          )}
+
+          {/* Settings View */}
+          {activeView === 'settings' && <Settings />}
+
+          {/* Profile View */}
+          {activeView === 'profile' && <Profile />}
         </div>
       </div>
     </div>

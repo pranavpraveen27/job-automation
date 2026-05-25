@@ -1,7 +1,17 @@
 import { motion } from 'framer-motion';
-import { Sparkles, UserCircle } from 'lucide-react';
+import { Sparkles, UserCircle, LogOut } from 'lucide-react';
+import { useState } from 'react';
 
-function Navbar() {
+function Navbar({ onProfileClick }) {
+  const [showMenu, setShowMenu] = useState(false);
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.assign('/login');
+  };
+
   return (
     <motion.header
       initial={{ opacity: 0, y: -20 }}
@@ -18,10 +28,36 @@ function Navbar() {
         </div>
       </div>
 
-      <button className="inline-flex items-center gap-2 rounded-full border border-slate-800/80 bg-slate-900 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-700 hover:text-white">
-        <UserCircle className="h-4 w-4" />
-        Profile
-      </button>
+      <div className="relative">
+        <button
+          onClick={() => setShowMenu(!showMenu)}
+          className="inline-flex items-center gap-2 rounded-full border border-slate-800/80 bg-slate-900 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-700 hover:text-white"
+        >
+          <UserCircle className="h-4 w-4" />
+          {user.fullName || 'Profile'}
+        </button>
+        {showMenu && (
+          <div className="absolute right-0 top-full mt-2 w-48 rounded-2xl border border-slate-700/80 bg-slate-900/95 shadow-lg z-50">
+            <button
+              onClick={() => {
+                onProfileClick();
+                setShowMenu(false);
+              }}
+              className="flex w-full items-center gap-2 px-4 py-3 text-sm text-slate-200 hover:bg-slate-800/60 rounded-t-2xl"
+            >
+              <UserCircle className="h-4 w-4" />
+              Profile Settings
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-2 px-4 py-3 text-sm text-red-400 hover:bg-slate-800/60 rounded-b-2xl border-t border-slate-700/50"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
+          </div>
+        )}
+      </div>
     </motion.header>
   );
 }

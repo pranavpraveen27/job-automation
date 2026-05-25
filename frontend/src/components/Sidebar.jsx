@@ -1,14 +1,14 @@
 import { LayoutGrid, FileText, Briefcase, Search, Settings } from 'lucide-react';
 
 const menuItems = [
-  { label: 'Dashboard', icon: LayoutGrid },
-  { label: 'Resume Analyzer', icon: FileText },
-  { label: 'Job Search', icon: Search },
-  { label: 'Applications', icon: Briefcase },
-  { label: 'Settings', icon: Settings },
+  { label: 'Dashboard', view: 'recommendations', icon: LayoutGrid },
+  { label: 'Resume Analyzer', view: 'resume-analyzer', icon: FileText },
+  { label: 'Job Search', view: 'job-search', icon: Search },
+  { label: 'Applications', view: 'applications', icon: Briefcase },
+  { label: 'Settings', view: 'settings', icon: Settings },
 ];
 
-function Sidebar() {
+function Sidebar({ activeView, onNavigate, userEmail }) {
   return (
     <>
       <aside className="hidden w-72 flex-col gap-6 rounded-[2rem] border border-slate-800/70 bg-slate-950/90 px-6 py-8 text-slate-300 shadow-2xl shadow-slate-950/20 lg:flex">
@@ -18,13 +18,15 @@ function Sidebar() {
         </div>
 
         <nav className="space-y-3">
-          {menuItems.map((item, index) => {
+          {menuItems.map((item) => {
             const Icon = item.icon;
+            const isActive = activeView === item.view;
             return (
               <button
                 key={item.label}
+                onClick={() => onNavigate(item.view)}
                 className={`flex w-full items-center gap-3 rounded-3xl px-4 py-3 text-left text-sm font-medium transition ${
-                  index === 0
+                  isActive
                     ? 'bg-slate-900 text-white shadow-lg shadow-slate-950/30'
                     : 'text-slate-300 hover:bg-slate-900 hover:text-white'
                 }`}
@@ -43,13 +45,15 @@ function Sidebar() {
       </aside>
 
       <nav className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-between gap-2 border-t border-slate-800/70 bg-slate-950/95 px-4 py-3 text-slate-300 shadow-2xl shadow-slate-950/20 backdrop-blur-xl lg:hidden">
-        {menuItems.map((item, index) => {
+        {menuItems.map((item) => {
           const Icon = item.icon;
+          const isActive = activeView === item.view;
           return (
             <button
               key={item.label}
+              onClick={() => onNavigate(item.view)}
               className={`flex flex-1 flex-col items-center justify-center rounded-3xl px-3 py-2 text-center text-[0.72rem] transition ${
-                index === 0 ? 'bg-slate-900 text-white' : 'hover:bg-slate-900/80 hover:text-white'
+                isActive ? 'bg-slate-900 text-white' : 'hover:bg-slate-900/80 hover:text-white'
               }`}
             >
               <Icon className="h-5 w-5" />
